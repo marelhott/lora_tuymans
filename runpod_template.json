@@ -1,0 +1,64 @@
+{
+  "name": "AI Style Transfer - GPU Optimized",
+  "description": "Pokročilá aplikace pro přenos malířského stylu pomocí AI modelů s plnou GPU podporou a automatickým stažením base modelů.",
+  "dockerArgs": "",
+  "containerDiskInGb": 50,
+  "volumeInGb": 20,
+  "volumeMountPath": "/data",
+  "ports": "8501/http,8502/http,7777/http",
+  "env": [
+    {
+      "key": "FORCE_CPU",
+      "value": "false"
+    },
+    {
+      "key": "MAX_MEMORY_GB",
+      "value": "24"
+    },
+    {
+      "key": "ENABLE_ATTENTION_SLICING",
+      "value": "true"
+    },
+    {
+      "key": "ENABLE_CPU_OFFLOAD",
+      "value": "auto"
+    },
+      {
+        "key": "PYTORCH_CUDA_ALLOC_CONF",
+      "value": "max_split_size_mb:512,garbage_collection_threshold:0.6"
+    },
+    {
+      "key": "CUDA_VISIBLE_DEVICES",
+      "value": "0"
+    },
+    {
+      "key": "NVIDIA_VISIBLE_DEVICES",
+      "value": "all"
+    },
+    {
+      "key": "HF_HOME",
+      "value": "/root/.cache/huggingface"
+    },
+    {
+      "key": "TRANSFORMERS_CACHE",
+      "value": "/root/.cache/huggingface"
+    },
+    {
+      "key": "LORA_MODELS_PATH",
+      "value": "/data/loras"
+    },
+    {
+      "key": "FULL_MODELS_PATH",
+      "value": "/data/models"
+    }
+  ],
+  "imageName": "mulenmara1505/lora_tuymans:latest",
+  "isPublic": false,
+  "readme": "# AI Style Transfer - RunPod Template\n\n## Popis\nPokročilá aplikace pro přenos malířského stylu pomocí AI modelů s plnou GPU podporou.\n\n## Funkce\n- 🎨 Přenos malířského stylu pomocí LoRA a full safetensors modelů\n- 🚀 Automatické stažení base modelů při startu\n- 💾 Podpora externího storage pro LoRA modely\n- 🔧 GPU optimalizace s attention slicing a CPU offload\n- 📊 Progress tracking pro velké soubory\n- 🧠 Inteligentní memory management\n\n## Požadavky\n- **GPU:** NVIDIA s minimálně 8 GB VRAM (doporučeno 16+ GB)\n- **RAM:** Minimálně 16 GB (doporučeno 32+ GB)\n- **Storage:** 50 GB pro container + 20 GB volume pro LoRA modely\n\n## Použití\n1. Spusťte pod s touto template\n2. Počkejte na inicializaci (stažení base modelu)\n3. Otevřete aplikaci na portu 8501\n4. Nahrajte obrázek a model nebo vyberte z /workspace/lora_models\n5. Nastavte parametry a klikněte na 'Aplikovat styl'\n\n## Doporučené GPU konfigurace\n- **RTX 4090:** MAX_MEMORY_GB=24, ENABLE_CPU_OFFLOAD=false\n- **RTX 3090:** MAX_MEMORY_GB=24, ENABLE_CPU_OFFLOAD=auto\n- **RTX 3080:** MAX_MEMORY_GB=10, ENABLE_CPU_OFFLOAD=true\n- **RTX 3070:** MAX_MEMORY_GB=8, ENABLE_CPU_OFFLOAD=true\n\n## Volume Mount\nLoRA modely umístěte do `/workspace/lora_models` pro rychlý přístup bez nahrávání.\n\n## Porty\n- **8501:** Streamlit aplikace (HTTP)\n\n## Environment Variables\nVšechny proměnné jsou předkonfigurovány pro optimální výkon.",
+  "advancedConfiguration": {
+    "startScript": "",
+    "prepareScript": "",
+    "startJupyter": false,
+    "startSsh": false
+  }
+}

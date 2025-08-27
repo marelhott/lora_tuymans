@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  ai-style-transfer:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./cache:/root/.cache
+    environment:
+      - FORCE_CPU=false
+      - MAX_MEMORY_GB=8
+      - ENABLE_ATTENTION_SLICING=true
+      - ENABLE_CPU_OFFLOAD=auto
+      - BASE_MODEL=stabilityai/stable-diffusion-xl-base-1.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
