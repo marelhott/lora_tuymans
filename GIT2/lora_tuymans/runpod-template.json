@@ -1,0 +1,51 @@
+{
+  "name": "LoRA Tuymans Style Transfer (Optimized)",
+  "description": "AI-powered style transfer using LoRA models with Luc Tuymans artistic style. Optimized for RunPod with comprehensive debugging and monitoring.",
+  "imageName": "mulenmara1505/lora_tuymans:latest",
+  "dockerArgs": "",
+  "ports": "8505/http",
+  "volumeInPath": "/workspace",
+  "volumeMountPath": "/data",
+  "containerDiskInGb": 50,
+  "env": [
+    {
+      "key": "MAX_MEMORY_GB",
+      "value": "20",
+      "description": "Maximum memory usage for AI models"
+    },
+    {
+      "key": "ENABLE_ATTENTION_SLICING",
+      "value": "true",
+      "description": "Enable memory optimization for large models"
+    },
+    {
+      "key": "STREAMLIT_SERVER_HEADLESS",
+      "value": "true",
+      "description": "Run Streamlit in headless mode"
+    },
+    {
+      "key": "STREAMLIT_SERVER_ENABLE_CORS",
+      "value": "true",
+      "description": "Enable CORS for RunPod proxy"
+    },
+    {
+      "key": "STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION",
+      "value": "false",
+      "description": "Disable XSRF protection for RunPod compatibility"
+    },
+    {
+      "key": "CUDA_VISIBLE_DEVICES",
+      "value": "0",
+      "description": "GPU device selection"
+    },
+    {
+      "key": "PYTORCH_CUDA_ALLOC_CONF",
+      "value": "max_split_size_mb:512",
+      "description": "PyTorch CUDA memory management"
+    }
+  ],
+  "startScript": "./start_services.sh",
+  "readme": "# LoRA Tuymans Style Transfer\n\n## Features\n- AI-powered style transfer using LoRA models\n- Luc Tuymans artistic style\n- Modern Streamlit UI\n- GPU acceleration\n- Comprehensive monitoring and debugging\n\n## Usage\n1. Upload your image\n2. Select LoRA model (place in /workspace/loras/)\n3. Adjust parameters\n4. Generate styled image\n\n## Ports\n- 8505: Streamlit web interface\n\n## Volumes\n- /workspace/loras -> /data/loras (LoRA models)\n- /workspace/models -> /data/models (Full models)\n\n## Recommended GPU\n- RTX 4000 Ada Generation (20GB VRAM)\n- RTX A6000 (48GB VRAM)\n- RTX 3090 (24GB VRAM)\n\n## Troubleshooting\nCheck logs in the terminal for detailed diagnostics.",
+  "category": "AI/ML",
+  "tags": ["ai", "ml", "style-transfer", "lora", "art", "streamlit", "pytorch"]
+}

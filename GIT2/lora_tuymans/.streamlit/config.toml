@@ -1,0 +1,47 @@
+[server]
+maxUploadSize = 10240
+headless = true
+address = "0.0.0.0"
+port = 8505
+enableCORS = true
+enableXsrfProtection = false
+enableWebsocketCompression = false
+allowRunOnSave = false
+runOnSave = false
+enableStaticServing = false
+baseUrlPath = ""
+# WebSocket alternativy pro RunPod proxy
+webSocketProxyHost = "0.0.0.0"
+webSocketProxyPort = 8505
+# Fallback na HTTP polling
+fastReruns = false
+
+[browser]
+serverAddress = "0.0.0.0"
+serverPort = 8505
+# Vypnutí WebSocket na browser straně
+gatherUsageStats = false
+
+[global]
+developmentMode = false
+# Optimalizace pro proxy prostředí
+disableFolderWatchdog = true
+
+[runner]
+# Vypnutí fast rerun pro stabilitu
+fastReruns = false
+postScriptGC = true
+
+[client]
+# Konfigurace pro proxy prostředí
+caching = true
+displayEnabled = true
+# Timeout konfigurace
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+primaryColor = "#3b82f6"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f8fafc"
+textColor = "#1e293b"
