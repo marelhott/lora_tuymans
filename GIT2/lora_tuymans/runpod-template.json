@@ -8,6 +8,8 @@
   "volumeMountPath": "/data",
   "containerDiskInGb": 50,
   "env": [
+    {"key": "STREAMLIT_SERVER_PORT", "value": "8505", "description": "Streamlit server port"},
+    {"key": "STREAMLIT_SERVER_ADDRESS", "value": "0.0.0.0", "description": "Streamlit server address"},
     {
       "key": "MAX_MEMORY_GB",
       "value": "20",

@@ -74,6 +74,8 @@ COPY app_no_websocket.py .
 COPY .streamlit/ .streamlit/
 COPY start_services.sh .
 COPY start_no_websocket.sh .
+COPY start_runpod.sh .
+COPY start_websocket_free.sh .
 COPY nginx-runpod.conf .
 COPY monitor.sh .
 
@@ -81,6 +83,8 @@ COPY monitor.sh .
 RUN chown -R appuser:appuser /app && \
     chmod +x start_services.sh && \
     chmod +x start_no_websocket.sh && \
+    chmod +x start_runpod.sh && \
+    chmod +x start_websocket_free.sh && \
     chmod +x monitor.sh
 
 # Expose port pro Streamlit
@@ -106,5 +110,5 @@ ENV FULL_MODELS_PATH=/data/models
 ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV BASE_MODEL=stabilityai/stable-diffusion-xl-base-1.0
 
-# Entrypoint pro spuštění aplikace
-ENTRYPOINT ["/app/start_services.sh"]
+# ENTRYPOINT pro kompletně WebSocket-free režim
+ENTRYPOINT ["/app/start_websocket_free.sh"]

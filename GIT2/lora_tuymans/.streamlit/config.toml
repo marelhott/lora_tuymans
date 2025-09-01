@@ -3,16 +3,16 @@ maxUploadSize = 10240
 headless = true
 address = "0.0.0.0"
 port = 8505
-enableCORS = true
+enableCORS = false
 enableXsrfProtection = false
 enableWebsocketCompression = false
 allowRunOnSave = false
 runOnSave = false
 enableStaticServing = false
 baseUrlPath = ""
-# WebSocket alternativy pro RunPod proxy
-webSocketProxyHost = "0.0.0.0"
-webSocketProxyPort = 8505
+# WebSocket completely disabled
+# webSocketProxyHost = "0.0.0.0"
+# webSocketProxyPort = 8505
 # Fallback na HTTP polling
 fastReruns = false
 
@@ -21,11 +21,14 @@ serverAddress = "0.0.0.0"
 serverPort = 8505
 # Vypnutí WebSocket na browser straně
 gatherUsageStats = false
+# Disable WebSocket connection
+connectionMode = "polling"
 
 [global]
 developmentMode = false
 # Optimalizace pro proxy prostředí
 disableFolderWatchdog = true
+disableWatchdogWarning = true
 
 [runner]
 # Vypnutí fast rerun pro stabilitu
