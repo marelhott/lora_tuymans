@@ -47,7 +47,7 @@
     }
   ],
   "startScript": "./start_services.sh",
-  "readme": "# LoRA Tuymans Style Transfer\n\n## Features\n- AI-powered style transfer using LoRA models\n- Luc Tuymans artistic style\n- Modern Streamlit UI\n- GPU acceleration\n- Comprehensive monitoring and debugging\n\n## Usage\n1. Upload your image\n2. Select LoRA model (place in /workspace/loras/)\n3. Adjust parameters\n4. Generate styled image\n\n## Ports\n- 8505: Streamlit web interface\n\n## Volumes\n- /workspace/loras -> /data/loras (LoRA models)\n- /workspace/models -> /data/models (Full models)\n\n## Recommended GPU\n- RTX 4000 Ada Generation (20GB VRAM)\n- RTX A6000 (48GB VRAM)\n- RTX 3090 (24GB VRAM)\n\n## Troubleshooting\nCheck logs in the terminal for detailed diagnostics.",
+  "readme": "# LoRA Tuymans Style Transfer\n\n## Features\n- AI-powered style transfer using LoRA models\n- Luc Tuymans artistic style\n- Modern Streamlit UI\n- GPU acceleration\n- Comprehensive monitoring and debugging\n\n## Usage\n1. Upload your image via Streamlit UI\n2. Select LoRA model (place in /workspace/loras/)\n3. Adjust parameters\n4. Generate styled image\n\n## Ports\n- **8505**: Streamlit web interface (main app)\n\n## Volumes\n- /workspace/loras -> /data/loras (LoRA models)\n- /workspace/models -> /data/models (Full models)\n\n## Recommended GPU\n- RTX 4000 Ada Generation (20GB VRAM)\n- RTX A6000 (48GB VRAM)\n- RTX 3090 (24GB VRAM)\n\n## Troubleshooting\nCheck logs in the terminal for detailed diagnostics.",
   "category": "AI/ML",
   "tags": ["ai", "ml", "style-transfer", "lora", "art", "streamlit", "pytorch"]
 }

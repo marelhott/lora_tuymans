@@ -49,26 +49,98 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Session state inicializace - VŽDY vyčistit při restartu
+# Detekce nové session (restart aplikace)
+if 'session_id' not in st.session_state:
+    import uuid
+    st.session_state.session_id = str(uuid.uuid4())
+    # Vyčištění všech dat při novém startu
+    st.session_state.current_model_path = None
+    st.session_state.current_model_type = None
+    st.session_state.pipeline = None
+    st.session_state.cached_pipeline = None
+    st.session_state.current_lora_path = None
+    st.session_state.all_generated_images = []  # ČISTÝ START
+    st.session_state.initialized = True
+    
+# Fallback pro starší session state
+if 'initialized' not in st.session_state:
+    st.session_state.initialized = True
+    st.session_state.current_model_path = None
+    st.session_state.current_model_type = None
+    st.session_state.pipeline = None
+    st.session_state.cached_pipeline = None
+    st.session_state.current_lora_path = None
+    st.session_state.all_generated_images = []
+
 # Lobe UI inspirovaný design
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
-/* Lobe UI - Hlavní kontejner */
+/* Lobe UI - Hlavní kontejner bez jakýchkoliv omezení */
 .main .block-container {
-    padding: 2rem 1.5rem;
-    max-width: none;
+    padding: 1rem;
+    max-width: none !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    min-height: 100vh;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    overflow-x: visible !important;
 }
 
-/* Lobe UI - Globální styling */
+/* Lobe UI - Globální styling bez omezení */
 .stApp {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     color: #1e293b;
     font-family: 'Inter', sans-serif;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+}
+
+/* Odstranění všech omezení výšky */
+.main, .main > div, .block-container, .element-container {
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+}
+
+/* Zajištění neomezeného scrollování */
+body, html {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    scroll-behavior: smooth;
+}
+
+/* Oprava Streamlit scrollování */
+.main, .main > div, .stApp {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    height: auto !important;
+    max-height: none !important;
+}
+
+/* Odstranění fixed positioning */
+.stApp > header {
+    position: relative !important;
+}
+
+/* Zajištění správného scrollování pro celou aplikaci */
+#root, [data-testid="stAppViewContainer"] {
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
 }
 
 /* Lobe UI - Sidebar styling */
@@ -253,19 +325,34 @@ st.markdown("""
     height: 8px;
 }
 
-/* Galerie obrázků - vertikální layout s proporčním zobrazením */
+/* Galerie obrázků - absolutně neomezený layout */
 .image-gallery {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 30px;
-    margin: 2rem 0;
-    padding-bottom: 3rem;
+    margin: 1rem 0;
+    padding-bottom: 5rem;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    overflow-y: visible !important;
+    position: relative;
+    z-index: 1;
+}
+
+.image-container {
+    position: relative;
+    display: inline-block;
+    margin: 0 auto;
 }
 
 .gallery-image {
-    max-width: 800px;
-    max-height: 600px;
+    max-width: 1000px;
+    max-height: 800px;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -280,6 +367,30 @@ st.markdown("""
 .gallery-image:hover {
     transform: scale(1.02);
     box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.15);
+}
+
+.download-icon {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.download-icon:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
 }
 
 /* Modal pro zvětšení obrázku */
@@ -318,48 +429,49 @@ h3 { font-size: 1.25rem; }
 </style>
 
 <script>
-let escapeHandler = null;
-
-function openImageModal(imageSrc) {
-    // Odstranění existujícího modalu
-    closeImageModal();
-    
-    const modal = document.createElement('div');
-    modal.className = 'image-modal';
-    modal.innerHTML = `<img src="${imageSrc}" class="modal-image">`;
-    
-    // Kliknutí na pozadí zavře modal
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeImageModal();
-        }
-    });
-    
-    // Dvojklik zavře modal
-    modal.addEventListener('dblclick', closeImageModal);
-    
-    document.body.appendChild(modal);
-    
-    // ESC klávesa zavře modal
-    escapeHandler = function(e) {
-        if (e.key === 'Escape') {
-            closeImageModal();
-        }
-    };
-    document.addEventListener('keydown', escapeHandler);
+function openImageFullscreen(imageSrc) {
+    // Otevření nového okna
+    const win = window.open("", "_blank");
+    win.document.write(`
+        <html>
+        <head>
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                    background: black;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100vh;
+                    overflow: hidden;
+                }
+                img {
+                    max-width: 100vw;
+                    max-height: 100vh;
+                    object-fit: contain;
+                    cursor: pointer;
+                }
+            </style>
+        </head>
+        <body>
+            <img src="${imageSrc}" ondblclick="window.close()">
+        </body>
+        </html>
+    `);
 }
 
-function closeImageModal() {
-    const modal = document.querySelector('.image-modal');
-    if (modal) {
-        modal.remove();
-    }
-    
-    // Odstranění event listeneru
-    if (escapeHandler) {
-        document.removeEventListener('keydown', escapeHandler);
-        escapeHandler = null;
-    }
+function handleImageClick(imageSrc) {
+    openImageFullscreen(imageSrc);
+}
+
+function downloadImage(imageSrc, filename) {
+    const link = document.createElement('a');
+    link.href = imageSrc;
+    link.download = filename || 'generated_image.png';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 </script>
 """, unsafe_allow_html=True)
@@ -470,9 +582,8 @@ def detect_model_type(file_path):
         st.warning(f"Nelze detekovat typ modelu: {e}")
         return "unknown"
 
-@st.cache_resource
 def load_base_model():
-    """Načtení základního SDXL modelu"""
+    """Načtení základního SDXL modelu - BEZ CACHE pro správné LoRA switching"""
     try:
         device = "cuda" if torch.cuda.is_available() and not FORCE_CPU else "cpu"
         
@@ -496,10 +607,31 @@ def load_base_model():
         st.error(f"Chyba při načítání základního modelu: {e}")
         return None
 
-def load_lora_model(pipeline, lora_path: str):
-    """Načtení LoRA modelu"""
+def load_lora_model(pipeline, lora_path: str, current_lora_path: str = None):
+    """Načtení LoRA modelu na fresh pipeline"""
     try:
+        # Validace lora_path
+        if lora_path is None:
+            st.error("LoRA path je None - nebyl vybrán žádný model")
+            return None
+        
+        if not os.path.exists(lora_path):
+            st.error(f"LoRA soubor neexistuje: {lora_path}")
+            return None
+        
+        # Vyčištění GPU paměti před načtením
+        import torch
+        import gc
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        
+        # Načtení LoRA modelu na fresh pipeline
+        st.write(f"🔧 Načítám LoRA: {os.path.basename(lora_path)}")
         pipeline.load_lora_weights(lora_path)
+        
+        # Ověření načtení
+        st.success(f"✅ LoRA model načten: {os.path.basename(lora_path)}")
         return pipeline
     except Exception as e:
         st.error(f"Chyba při načítání LoRA modelu: {e}")
@@ -508,6 +640,15 @@ def load_lora_model(pipeline, lora_path: str):
 def load_full_model(model_path: str):
     """Načtení plného safetensors modelu"""
     try:
+        # Validace model_path
+        if model_path is None:
+            st.error("Model path je None - nebyl vybrán žádný model")
+            return None
+        
+        if not os.path.exists(model_path):
+            st.error(f"Model soubor neexistuje: {model_path}")
+            return None
+        
         device = "cuda" if torch.cuda.is_available() and not FORCE_CPU else "cpu"
         
         pipeline = StableDiffusionXLImg2ImgPipeline.from_single_file(
@@ -538,11 +679,8 @@ def apply_style(
     num_inference_steps: int = 20,
     progress_callback=None,
     clip_skip: int = 2,
-    seed: Optional[int] = None,
     upscale_factor: int = 1,
-    num_images: int = 1,
-    variance_seed: Optional[int] = None,
-    variance_strength: float = 0.0
+    num_images: int = 1
 ) -> List[Image.Image]:
     """Aplikace stylu na vstupní obrázek podle API dokumentace"""
     
@@ -554,16 +692,32 @@ def apply_style(
         if progress_callback:
             progress_callback(0.1, "Načítání modelu...", "model")
         
-        # Načtení modelu podle typu
+        # Načtení modelu podle typu - VŽDY FRESH pro správné LoRA switching
         if model_type == "lora":
+            # VŽDY načíst fresh base model pro LoRA
             pipeline = load_base_model()
             if pipeline is None:
                 return []
             if progress_callback:
                 progress_callback(0.5, "Načítání LoRA...", "model")
-            pipeline = load_lora_model(pipeline, model_path)
+            
+            # Načtení LoRA modelu na fresh base
+            pipeline = load_lora_model(pipeline, model_path, None)
+            
+            # Debug info
+            st.info(f"🔄 Načten LoRA model: {os.path.basename(model_path)}")
         else:
+            # Full model handling - také fresh
             pipeline = load_full_model(model_path)
+            st.info(f"🔄 Načten full model: {os.path.basename(model_path)}")
+            
+        # Vyčištění cache pro zajištění fresh loading
+        st.session_state.cached_pipeline = None
+        
+        # Vyčištění všech torch cache pro memory management
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
         
         if pipeline is None:
             return []
@@ -571,18 +725,28 @@ def apply_style(
         if progress_callback:
             progress_callback(1.0, "Model načten", "model")
         
-        # Použití výchozího scheduleru
+        # Nastavení scheduleru pro konzistentní výsledky
+        # Použití EulerDiscreteScheduler pro lepší determinismus
+        pipeline.scheduler = EulerDiscreteScheduler.from_config(pipeline.scheduler.config)
+        
+        # Debug scheduler info
+        st.write(f"🔧 Scheduler: {type(pipeline.scheduler).__name__}")
+        st.write(f"📊 Scheduler config: steps={pipeline.scheduler.num_train_timesteps}")
+        
+        # Force deterministic behavior
+        if hasattr(pipeline.scheduler, 'set_timesteps'):
+            pipeline.scheduler.set_timesteps(num_inference_steps, device=device)
         
         # Zachování aspect ratio vstupního obrázku
         original_width, original_height = input_image.size
         aspect_ratio = original_width / original_height
         
-        # Nastavení rozměrů s dodržením aspect ratio (max 1024px)
+        # Nastavení rozměrů s dodržením aspect ratio (max 1200px)
         if aspect_ratio > 1:  # landscape
-            new_width = min(1024, original_width)
+            new_width = min(1200, original_width)
             new_height = int(new_width / aspect_ratio)
         else:  # portrait nebo square
-            new_height = min(1024, original_height)
+            new_height = min(1200, original_height)
             new_width = int(new_height * aspect_ratio)
         
         # Zajištění že rozměry jsou dělitelné 8 (požadavek SDXL)
@@ -598,12 +762,22 @@ def apply_style(
             if progress_callback:
                 progress_callback(0.0, f"Generování obrázku {i+1} z {num_images}", "generation")
             
-            # Nastavení generátoru
-            current_seed = seed if seed is not None else random.randint(0, 2147483647)
-            if variance_seed is not None and i > 0:
-                current_seed = variance_seed + i
+            # Generování s random seed pro každý obrázek
+            import hashlib
+            unique_string = f"{time.time()}_{model_path}_{i}_{random.random()}"
+            current_seed = int(hashlib.md5(unique_string.encode()).hexdigest()[:8], 16)
+            
+            # Reset všech random generátorů pro konzistenci
+            torch.manual_seed(current_seed)
+            np.random.seed(current_seed)
+            random.seed(current_seed)
             
             generator = torch.Generator(device=device).manual_seed(current_seed)
+            
+            # Debug info
+            st.write(f"🎲 Random seed: {current_seed}")
+            st.write(f"🎨 Model: {os.path.basename(model_path)}")
+            st.write(f"💪 Strength: {strength}, Steps: {num_inference_steps}")
             
             # Generování s progress updates
             if progress_callback:
@@ -697,19 +871,7 @@ with col_left:
     
     # Sampler odstraněn
     
-    # Seed
-    st.subheader("Seed")
-    use_seed = st.checkbox("Použít seed")
-    seed = st.number_input("Seed", min_value=0, max_value=2147483647, value=42) if use_seed else None
-    
-    # Variance seed
-    use_variance_seed = st.checkbox("Variance seed")
-    if use_variance_seed:
-        variance_seed = st.number_input("Variance seed", min_value=0, max_value=2147483647, value=123)
-        variance_strength = st.slider("Variance strength", min_value=0.0, max_value=1.0, value=0.1, step=0.05)
-    else:
-        variance_seed = None
-        variance_strength = 0.0
+    # Seed sekce odstraněna - používá se automatický random seed
 
 # Pravý sidebar - modely a systém
 with col_right:
@@ -740,8 +902,31 @@ with col_right:
         )
         if selected_lora != "(žádný)":
             selected_index = model_options.index(selected_lora)
-            st.session_state.current_model_path = lora_models[selected_index]['path']
-            st.session_state.current_model_type = "lora"
+            new_model_path = lora_models[selected_index]['path']
+            # Detekce změny modelu
+            if st.session_state.current_model_path != new_model_path:
+                st.session_state.current_model_path = new_model_path
+                st.session_state.current_model_type = "lora"
+                # Vyčištění cache při změně modelu
+                st.session_state.cached_pipeline = None
+                # Vyčištění GPU paměti
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                # Reset full model selectbox
+                if 'full_select' in st.session_state:
+                    st.session_state.full_select = "(žádný)"
+        else:
+            # Reset při výběru "(žádný)"
+            if st.session_state.current_model_path is not None and st.session_state.current_model_type == "lora":
+                st.session_state.current_model_path = None
+                st.session_state.current_model_type = None
+                st.session_state.cached_pipeline = None
+                st.session_state.current_lora_path = None
+                # Vyčištění paměti při resetu
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
     else:
         st.warning("Žádné LoRA modely")
         st.info("Umístěte .safetensors soubory do /data/loras")
@@ -761,8 +946,32 @@ with col_right:
         )
         if selected_full != "(žádný)":
             selected_index = model_options.index(selected_full)
-            st.session_state.current_model_path = full_models[selected_index]['path']
-            st.session_state.current_model_type = "full_model"
+            new_model_path = full_models[selected_index]['path']
+            # Detekce změny modelu
+            if st.session_state.current_model_path != new_model_path:
+                st.session_state.current_model_path = new_model_path
+                st.session_state.current_model_type = "full_model"
+                # Vyčištění cache při změně modelu
+                st.session_state.cached_pipeline = None
+                st.session_state.current_lora_path = None
+                # Vyčištění GPU paměti
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                # Reset LoRA selectbox
+                if 'lora_select' in st.session_state:
+                    st.session_state.lora_select = "(žádný)"
+        else:
+            # Reset při výběru "(žádný)"
+            if st.session_state.current_model_path is not None and st.session_state.current_model_type == "full_model":
+                st.session_state.current_model_path = None
+                st.session_state.current_model_type = None
+                st.session_state.cached_pipeline = None
+                st.session_state.current_lora_path = None
+                # Vyčištění paměti při resetu
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
     else:
         st.warning("Žádné full modely")
         st.info("Umístěte .safetensors soubory do /data/models")
@@ -773,89 +982,99 @@ with col_right:
 
 # Hlavní oblast
 with col_main:
-    # Tlačítko pro zpracování
-    process_button = st.button("Aplikovat styl", type="primary", use_container_width=True)
+    # Tlačítka pro zpracování a vymazání
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        process_button = st.button("Aplikovat styl", type="primary", use_container_width=True)
+    with col2:
+        if st.button("🗑️", help="Vymazat všechny obrázky", use_container_width=True):
+            st.session_state.all_generated_images = []
+            # Vyčištění paměti po smazání obrázků
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            gc.collect()
+            st.rerun()
     
-    # Progress bar kontejner - jeden řádek se dvěma poli
-    progress_container = st.container()
+    # Progress bar kontejner - jednoduchý
+    progress_container = st.empty()
     
-    # Placeholder pro výstupní obrázky
+    # Zobrazení galerie obrázků
+    if st.session_state.all_generated_images:
+        st.markdown('<div class="image-gallery">', unsafe_allow_html=True)
+        
+        for i, img in enumerate(st.session_state.all_generated_images):
+            # Konverze obrázku na base64 pro JavaScript
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            img_base64 = base64.b64encode(buf.getvalue()).decode()
+            img_data_url = f"data:image/png;base64,{img_base64}"
+            
+            # Zobrazení obrázku s download ikonou
+            st.markdown(
+                f'''<div style="text-align: center; margin: 15px 0;">
+                    <div class="image-container">
+                        <img src="{img_data_url}" 
+                             class="gallery-image" 
+                             onclick="handleImageClick('{img_data_url}')" 
+                             alt="Generated image {i+1}"
+                             style="max-width: 1000px; max-height: 800px; width: auto; height: auto; display: block; margin: 0 auto; cursor: pointer;" />
+                        <button class="download-icon" 
+                                onclick="event.stopPropagation(); downloadImage('{img_data_url}', 'generated_image_{i+1}.png')" 
+                                title="Stáhnout obrázek">
+                            ⬇️
+                        </button>
+                    </div>
+                </div>''',
+                unsafe_allow_html=True
+            )
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Kontejner pro výstup
     output_placeholder = st.empty()
     
     # Zpracování obrázku
     if process_button and input_image_file is not None and hasattr(st.session_state, 'current_model_path'):
-         with progress_container:
-             # Jeden řádek se dvěma progress poli
-             prog_col1, prog_col2 = st.columns(2)
-             
-             with prog_col1:
-                 model_text = st.empty()
-                 model_progress = st.progress(0)
-             
-             with prog_col2:
-                 generation_text = st.empty()
-                 generation_progress = st.progress(0)
+         # Jednoduchý progress bar
+         progress_bar = progress_container.progress(0)
+         status_text = st.empty()
          
          def update_progress(progress: float, text: str = "", phase: str = "generation"):
-              if phase == "model":
-                  model_text.text(text if text else "Načítání modelu...")
-                  model_progress.progress(progress)
-              else:
-                  generation_text.text(text if text else "Generování obrázků...")
-                  generation_progress.progress(progress)
+              status_text.text(text if text else f"Zpracování... {int(progress*100)}%")
+              progress_bar.progress(progress)
          
          start_time = time.time()
          
          try:
              # Generování obrázku
              result_images = apply_style(
-                 input_image,
-                 st.session_state.current_model_path,
-                 st.session_state.current_model_type,
-                 strength,
-                 guidance_scale,
-                 num_inference_steps,
-                 update_progress,
-                 clip_skip=clip_skip,
-                 seed=seed,
-                 upscale_factor=upscale_factor,
-                 num_images=num_images,
-
-                 variance_seed=variance_seed,
-                 variance_strength=variance_strength
-             )
+                  input_image,
+                  st.session_state.current_model_path,
+                  st.session_state.current_model_type,
+                  strength,
+                  guidance_scale,
+                  num_inference_steps,
+                  update_progress,
+                  clip_skip=clip_skip,
+                  upscale_factor=upscale_factor,
+                  num_images=num_images
+              )
              
              # Vyčištění progress baru
              progress_container.empty()
+             status_text.empty()
              
-             # Zobrazení výsledků
+             # Zobrazení výsledků - postupné přidávání obrázků
              if result_images:
-                 st.session_state.generated_images = result_images
+                 # Inicializace session state pro obrázky pokud neexistuje
+                 if 'all_generated_images' not in st.session_state:
+                     st.session_state.all_generated_images = []
                  
-                 with output_placeholder.container():
-                     # Galerie obrázků - vertikální layout bez textu
-                     st.markdown('<div class="image-gallery">', unsafe_allow_html=True)
-                     
-                     for i, img in enumerate(result_images):
-                         # Konverze obrázku na base64 pro JavaScript
-                         buf = io.BytesIO()
-                         img.save(buf, format="PNG")
-                         img_base64 = base64.b64encode(buf.getvalue()).decode()
-                         img_data_url = f"data:image/png;base64,{img_base64}"
-                         
-                         # Zobrazení obrázku s onclick handlerem - zachování proporcí
-                         st.markdown(
-                             f'''<div style="text-align: center; margin: 15px 0;">
-                                 <img src="{img_data_url}" 
-                                      class="gallery-image" 
-                                      onclick="openImageModal('{img_data_url}')" 
-                                      alt="Generated image {i+1}"
-                                      style="max-width: 800px; max-height: 600px; width: auto; height: auto; display: block; margin: 0 auto;" />
-                             </div>''',
-                             unsafe_allow_html=True
-                         )
-                     
-                     st.markdown('</div>', unsafe_allow_html=True)
+                 # Přidání nových obrázků k existujícím
+                 st.session_state.all_generated_images.extend(result_images)
+                 
+                 # Zobrazení všech obrázků - persistentní způsob
+                 st.rerun()
                  
                  end_time = time.time()
                  st.success(f"Generování dokončeno za {end_time - start_time:.1f} sekund")
@@ -871,10 +1090,3 @@ with col_main:
              st.warning("Vyberte model")
 
 # Footer
-st.markdown("""
----
-<div style="text-align: center; color: #64748b; font-size: 0.875rem; font-family: 'Inter', sans-serif;">
-    LoRA Tuymans Style Transfer - Vygenerováno z dokumentace 30.8.2025<br>
-    Kompletní aplikace pro stylový přenos pomocí LoRA modelů
-</div>
-""", unsafe_allow_html=True)

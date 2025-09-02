@@ -54,6 +54,7 @@ RUN apt-get update && apt-get install -y \
     htop \
     nano \
     vim-tiny \
+
     && rm -rf /var/lib/apt/lists/*
 
 # Kopírování Python environment z builder stage
@@ -62,8 +63,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Vytvoření non-root uživatele pro security
 RUN useradd --create-home --shell /bin/bash appuser && \
-    mkdir -p /app /app/static /data/loras /data/models /home/appuser/.cache/huggingface && \
-    chown -R appuser:appuser /app /data /home/appuser/.cache
+    mkdir -p /app /app/static /data/loras /data/models /workspace /home/appuser/.cache/huggingface && \
+    chown -R appuser:appuser /app /data /workspace /home/appuser/.cache
 
 # Nastavení pracovního adresáře
 WORKDIR /app
@@ -76,15 +77,20 @@ COPY start_services.sh .
 COPY start_no_websocket.sh .
 COPY start_runpod.sh .
 COPY start_websocket_free.sh .
+
 COPY nginx-runpod.conf .
 COPY monitor.sh .
 
+
+
 # Nastavení oprávnění
 RUN chown -R appuser:appuser /app && \
+
     chmod +x start_services.sh && \
     chmod +x start_no_websocket.sh && \
     chmod +x start_runpod.sh && \
     chmod +x start_websocket_free.sh && \
+
     chmod +x monitor.sh
 
 # Expose port pro Streamlit
@@ -109,6 +115,7 @@ ENV LORA_MODELS_PATH=/data/loras
 ENV FULL_MODELS_PATH=/data/models
 ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV BASE_MODEL=stabilityai/stable-diffusion-xl-base-1.0
+
 
 # ENTRYPOINT pro kompletně WebSocket-free režim
 ENTRYPOINT ["/app/start_websocket_free.sh"]
